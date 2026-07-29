@@ -21,10 +21,10 @@ jobs:
           
           OUR_RELEASE_BODY=$(gh api repos/zhumengstarsea/update/releases/tags/miclaw_api_bridge_module --jq .body 2>/dev/null || echo "")
           
-          if echo "$OUR_RELEASE_BODY" | grep -q "(Release: $UPSTREAM_TAG)"; then
-            echo "上游版本 $UPSTREAM_TAG 已经构建过，跳过通知"
-          else
-            echo "检测到上游新版本 $UPSTREAM_TAG！正在通知模块私库发起构建打包..."
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ] || ! echo "$OUR_RELEASE_BODY" | grep -q "(Release: $UPSTREAM_TAG)"; then
+            echo "手动测试或检测到上游新版本 $UPSTREAM_TAG！正在通知模块私库发起构建打包..."
             gh api repos/zhumengstarsea/miclaw_api_bridge_module/dispatches \
               -f event_type='upstream_updated'
+          else
+            echo "上游版本 $UPSTREAM_TAG 已经构建过，跳过通知"
           fi
