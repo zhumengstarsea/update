@@ -1,0 +1,30 @@
+name: 检查上游更新
+
+on:
+  schedule:
+    - cron: '0 */2 * * *' # 每 2 小时巡检一次上游
+  workflow_dispatch:
+
+jobs:
+  check-and-dispatch:
+    runs-on: ubuntu-latest
+    steps:
+      - name: 检查上游 Release 并通知模块仓库
+        env:
+          GH_TOKEN: ${{ secrets.PAT_TOKEN }}
+        run: |
+          UPSTREAM_TAG=$(gh api repos/NEORUAA/miclaw_api_bridge/releases/latest --jq .tag_name 2>/dev/null || echo "")
+          if [ -z "$UPSTREAM_TAG" ]; then
+            echo "未找到上游 Release"
+            exit 0
+          fi
+          
+          OUR_RELEASE_BODY=$(gh api repos/zhumengstarsea/update/releases/tags/miclaw_api_bridge_module --jq .body 2>/dev/null || echo "")
+          
+          if echo "$OUR_RELEASE_BODY" | grep -q "(Release: $UPSTREAM_TAG)"; then
+            echo "上游版本 $UPSTREAM_TAG 已经构建过，跳过通知"
+          else
+            echo "检测到上游新版本 $UPSTREAM_TAG！正在通知模块私库发起构建打包..."
+            gh api repos/zhumengstarsea/miclaw_api_bridge_module/dispatches \
+              -f event_type='upstream_updated'
+          fi
